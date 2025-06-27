@@ -1,10 +1,10 @@
-import jsony, os, sequtils, strformat
+import cligen, jsony, os, sequtils, strformat
 
 type
   TodoItem = object
     id: int
     title: string
-    done*: bool
+    done: bool
 
 const TodoFile = "todos.json"
 var todos: seq[TodoItem]
@@ -15,9 +15,13 @@ proc load_todos(): seq[TodoItem] =
   let raw = readFile(TodoFile)
   fromJson(raw, seq[TodoItem])
 
+proc save_todos() =
+  writeFile(TodoFile, toJson(todos))
+
 proc add_todo(title: string) =
   let todo = TodoItem(id: todos.len + 1, title: title, done: false)
   todos.add(todo)
+  save_todos()
 
 proc list_todos() =
   for todo in todos:
@@ -27,23 +31,36 @@ proc list_todos() =
 proc mark_todo_as_done(id: int) =
   for i in 0..<todos.len:
     if todos[i].id == id: todos[i].done = true
+  save_todos()
 
-proc edit_todo(id: int, new_title: string) =
+proc edit_todo(id: int, title: string) =
   for i in 0..<todos.len:
-    if todos[i].id == id: todos[i].title = new_title
+    if todos[i].id == id: todos[i].title = title
+  save_todos()
 
 proc delete_todo(id: int) =
   todos = todos.filterIt(it.id != id)
   for i, todo in todos:
     todos[i].id = i + 1
+  save_todos()
 
-proc save_todos() =
-  writeFile(TodoFile, toJson(todos))
+proc init(title: string) = add_todo(title)
+proc list() = list_todos()
+proc edit(id: int, title: string) = edit_todo(id, title)
+proc done(id: int) = mark_todo_as_done(id)
+proc remove(id: int) = delete_todo(id)
 
 when isMainModule:
-  echo("ntodo")
   todos = load_todos()
-  list_todos()
-  delete_todo(1)
-  list_todos()
-  save_todos()
+  dispatchMulti(
+    [init, help = {
+      "title": "Title for the new to-do"}],
+    [list],
+    [edit, help = {
+      "id": "ID of the to-do to edit",
+      "title": "New title for the to-do"}],
+    [done, help = {
+      "id": "ID of the to-do to mark as done"}],
+    [remove, help = {
+      "id": "ID of the to-do to delete"}]
+  )
