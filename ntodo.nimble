@@ -11,3 +11,4 @@ bin           = @["ntodo"]
 # Dependencies
 
 requires "nim >= 1.6"
+requires "cligen >= 1.8.6"
